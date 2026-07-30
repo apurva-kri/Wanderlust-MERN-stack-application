@@ -1,32 +1,42 @@
-# ------------------- Stage 1: Build Stage ------------------------------
-FROM node:21 AS frontend-builder
+ARG NODE_VERSION=22
 
-# Set the working directory to /app
+FROM node:${NODE_VERSION} AS builder
+
+# LABEL is used in a Dockerfile to add metadata to an image, such as the author, version, description, or project information.
+LABEL stage="builder"  
+
 WORKDIR /app
 
-# Copy the package.json and package-lock.json for dependency installation
-COPY package*.json ./
+COPY package-lock.json package.json ./
 
-# Install dependencies
-RUN npm install
+RUN npm ci
 
-# Copy the rest of the application code
 COPY . .
 
-# ------------------- Stage 2: Final Stage ------------------------------
-FROM node:21-slim
+RUN npm run build
 
-# Set the working directory to /app
-WORKDIR /app
+FROM nginx:alpine
 
-# Copy built assets and dependencies from frontend-builder stage
-COPY --from=frontend-builder /app .
+LABEL stage="production"
+# copy an image which is build above and save it in destination - /usr/share/nginx/html folder
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy the .env.sample file to .env.local
-COPY .env.docker .env.local
+LABEL maintainer="Apurva"
 
-# Expose port 5173 for the Node.js application
-EXPOSE 5173
+EXPOSE 80
 
-# Define the default command to run the application in development mode
-CMD ["npm", "run", "dev", "--", "--host"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+
+# nginx - start the nginx server, -g - it will passes the global configuration directive to Nginx , daemon off tells nginx not to run in the background
+CMD ["nginx", "-g", "daemon off;"]
+
+
+
+
+
+
+
+
+
+
