@@ -1,39 +1,66 @@
-version: "3.8"
 services:
-  mongodb:
-    container_name: mongo-service
-    image: mongo:latest
-    volumes:
-      - ./backend/data:/data
-    ports:
-      - "27017:27017"
 
-  backend:
-    container_name: backend
-    build: ./backend
-    env_file:
-      - ./backend/.env.docker
-    ports:
-      - "31100:8080"
-    depends_on:
-      - mongodb
+database:
+  image: mongo:latest                       #it pulls the dataase mongo image from dockerhub
+  container-name: mongo_db                  # it a name of my databbase cotainer
+  environment:                              # database env variables means dataase credentials
+    MONGO_INITDB_ROOT_USERNAME: devroot
+    MONGO_INITDB_ROOT_PASSWORD: devpassword
+    MONGO_INITDB_DATABASE: app_db
+  networks:                                 #define network so that all the services will run under the same network
+    - monnitoring
+  volumes:                                  # define volume to persist data of my db container to mongo_volume
+    - mongo_volume: /data/db
+  ports: 
+    27017:27017
+  healthcheck:
+    test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+    interval: 10s
+    timeout: 5s
+    retries: 3
+    start_period: 40s
 
-  frontend:
-    container_name: frontend
-    build: ./frontend
-    env_file:
-      - ./frontend/.env.docker
-    ports:
-      - "5173:5173"
+backend:
+  build: ./backend
+  container_name: backend
+  ennvironment:
+    MONGO_HOST: database
+    MONGO_PORT: 27017
+    MONGO_USERNAME: devroot
+    MONGO_PASSWORD: devpassword
+    MONGO_DATABASE: app_db
+  networks:
+    - monitoring
+  ports:
+    - "8080:8080"
+  depends_on: database
+  healthcheck:
+    test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]    #spider check the URL w/o downloadig response body
+    interval: 10s
+    timeout: 5s
+    retries: 3
+    start_period: 40s
 
-  redis:
-    container_name: redis-service
-    restart: unless-stopped
-    image: redis:7.0.5-alpine 
-    expose:
-        - 6379
-    depends_on:
-      - mongodb
+
+frontend:
+  build: ./frontend
+  container_name: frontend
+  networks:
+    - monitoring:
+  healthcheck:
+    test: ["CMD", "wget", "--spider", "-q", "https://localhost:80/"]
+    iterval: 10s
+    retries: 3
+    timeout: 5s
+    start_period: 40s
+
+  depends_on: backend
+  ports:
+    - "80:80"
+
+
+networks:
+  monitoring:
 
 volumes:
-  data:
+  mongo_db:
