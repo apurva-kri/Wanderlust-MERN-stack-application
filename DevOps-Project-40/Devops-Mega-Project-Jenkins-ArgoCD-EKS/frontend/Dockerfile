@@ -1,3 +1,4 @@
+# Stage 1 (builder stage) - used to build and packages and app
 ARG NODE_VERSION=22
 
 FROM node:${NODE_VERSION} AS builder
@@ -12,9 +13,9 @@ COPY package-lock.json package.json ./
 RUN npm ci
 
 COPY . .
-
-RUN npm run build
-
+# npm run build create a folder called /dist means distribution, where all the production files will be compiled and store here
+RUN npm run build 
+# stage 2: Runner stage - Used to run the application from the builder stage
 FROM nginx:alpine
 
 LABEL stage="production"

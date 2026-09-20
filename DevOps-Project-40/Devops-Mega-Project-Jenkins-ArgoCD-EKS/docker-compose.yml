@@ -1,66 +1,102 @@
 services:
+  database:
+    image: mongo:latest                       #it pulls the dataase mongo image from dockerhub
+    container_name: mongodb                  # it a name of my databbase cotainer
+    environment:                              # database env variables means dataase credentials
+      MONGO_INITDB_ROOT_USERNAME: devroot
+      MONGO_INITDB_ROOT_PASSWORD: devpassword
+      MONGO_INITDB_DATABASE: app_db
+    networks:                                 #define network so that all the services will run under the same network
+      - monitoring
+    volumes:                                  # define volume to persist data of my db container to mongo_volume
+      - mongo_volume:/data/db
+    ports: 
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
-database:
-  image: mongo:latest                       #it pulls the dataase mongo image from dockerhub
-  container-name: mongo_db                  # it a name of my databbase cotainer
-  environment:                              # database env variables means dataase credentials
-    MONGO_INITDB_ROOT_USERNAME: devroot
-    MONGO_INITDB_ROOT_PASSWORD: devpassword
-    MONGO_INITDB_DATABASE: app_db
-  networks:                                 #define network so that all the services will run under the same network
-    - monnitoring
-  volumes:                                  # define volume to persist data of my db container to mongo_volume
-    - mongo_volume: /data/db
-  ports: 
-    27017:27017
-  healthcheck:
-    test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-    interval: 10s
-    timeout: 5s
-    retries: 3
-    start_period: 40s
+  redis:
+    image: redis:7.4-alpine
+    container_name: redis
+    networks:
+      - monitoring
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
-backend:
-  build: ./backend
-  container_name: backend
-  ennvironment:
-    MONGO_HOST: database
-    MONGO_PORT: 27017
-    MONGO_USERNAME: devroot
-    MONGO_PASSWORD: devpassword
-    MONGO_DATABASE: app_db
-  networks:
-    - monitoring
-  ports:
-    - "8080:8080"
-  depends_on: database
-  healthcheck:
-    test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]    #spider check the URL w/o downloadig response body
-    interval: 10s
-    timeout: 5s
-    retries: 3
-    start_period: 40s
+ 
+  backend:
+    build: ./backend
+    container_name: backend
+    env_file:
+      - ./backend/.env.docker
+    networks:
+      - monitoring
+    ports:
+      - "8080:5000"
+    depends_on:
+      - database
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/health"]    #spider check the URL w/o downloadig response body
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
+   # backend:
+  #   build: ./backend
+  #   container_name: backend
+  #   environment:
+  #     MONGO_HOST: database
+  #     MONGO_PORT: 27017
+  #     MONGO_USERNAME: devroot
+  #     MONGO_PASSWORD: devpassword
+  #     MONGO_DATABASE: app_db
+  #     MONGODB_URI: ${MONGODB_URI}
+  #     REDIS_URL: ${REDIS_URL}
+  #     PORT: ${PORT}
+  #   networks:
+  #     - monitoring
+  #   ports:
+  #     - "8080:5000"
+  #   depends_on: 
+  #     - database
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/health"]    #spider check the URL w/o downloadig response body
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 40s
 
-frontend:
-  build: ./frontend
-  container_name: frontend
-  networks:
-    - monitoring:
-  healthcheck:
-    test: ["CMD", "wget", "--spider", "-q", "https://localhost:80/"]
-    iterval: 10s
-    retries: 3
-    timeout: 5s
-    start_period: 40s
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/"]
+      interval: 10s
+      retries: 3
+      timeout: 5s
+      start_period: 40s
 
-  depends_on: backend
-  ports:
-    - "80:80"
+    depends_on: 
+      - backend
+    ports:
+      - "81:80"
 
 
 networks:
   monitoring:
 
 volumes:
-  mongo_db:
+  mongo_volume:

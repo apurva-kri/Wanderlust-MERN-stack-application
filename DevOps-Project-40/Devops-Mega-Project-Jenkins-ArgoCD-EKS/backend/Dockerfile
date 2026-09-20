@@ -1,30 +1,41 @@
-FROM node:21 AS backend-builder
+FROM node:20-alpine
 
-# setup the working dir
 WORKDIR /app
 
-# code
+COPY package*.json ./
+RUN npm ci --omit=dev
+
 COPY . .
 
-# packages install
-RUN npm i
+EXPOSE 5000
 
-# tests
-RUN npm run test
-
-# Stage 2
-FROM node:21-slim
-
-# setup the working dir
-WORKDIR /app
-
-# copy the above stage as compressed
-COPY --from=backend-builder /app .
-
-COPY .env.docker .env
-
-# Port
-EXPOSE 8080
-
-# App
 CMD ["npm", "start"]
+
+
+
+# FROM node:21 AS build
+
+# WORKDIR /app
+
+# COPY package*.json .
+
+# RUN npm ci
+
+# COPY . .
+
+# RUN npm run build
+
+# # 2nd stage
+
+# FROM node:21-alpine 
+
+# WORKDIR /app
+
+# COPY --from=build /app/dist ./dist
+
+# EXPOSE 8080 
+
+# CMD ["npm","start"]
+
+
+
