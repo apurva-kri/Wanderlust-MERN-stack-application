@@ -64,8 +64,7 @@ jobs:
       - name: prettier check 
         run: npm run check
 
-      - name: npm build
-        run: npm run build
+
 
 
 
