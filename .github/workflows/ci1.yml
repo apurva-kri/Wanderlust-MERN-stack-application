@@ -14,7 +14,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: frontend
+        working-directory: DevOps-Project-40/Devops-Mega-Project-Jenkins-ArgoCD-EKS/frontend
 
     steps:
       - name: code checkout
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: DevOps-Project-40/Devops-Mega-Project-Jenkins-ArgoCD-EKS/backend
 
     steps:
       - name: code checkout
